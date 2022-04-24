@@ -203,6 +203,7 @@ function duration($dur = 0){
 
 		$('.table td, .table th').addClass('py-1 px-2 align-middle')
 		$('.table').dataTable({
+			"paging":   false,
 		// 	dom: 'Bfrtip',
         //     buttons: [
         //     'print'
