@@ -1,5 +1,5 @@
 <style>
-	
+
 
 @media print {
 	table.report { page-break-after:auto }
@@ -21,8 +21,10 @@
 </style>
 
 <?php
-$from = isset($_GET['from']) ? $_GET['from'] : date("Y-m-d",strtotime(date("Y-m-d")." -1 week"));
-$to = isset($_GET['to']) ? $_GET['to'] : date("Y-m-d",strtotime(date("Y-m-d")));
+$from = isset($_GET['from']) ? $_GET['from'] : null;
+$to = isset($_GET['to']) ? $_GET['to'] : null;
+$entries = isset($_GET['entries']) ? $_GET['entries'] : 10 ;
+$search = isset($_GET['search']) ? $_GET['search'] : null ;
 function duration($dur = 0){
     if($dur == 0){
         return "00:00";
@@ -45,16 +47,31 @@ function duration($dur = 0){
 				<legend>Filter</legend>
 					<form action="" id="filter">
 						<div class="row align-items-end">
-				
+							<div class="form-group col-md-2">
+									<label for="from" class="control-label">Search</label>
+	                                <input type="text" name="search" id="search" class="form-control form-control-sm rounded-0" placeholder="pencarian" value="<?= $search?>">
+								</div>
+							<div class="form-group col-md-2">
+								<label for="from" class="control-label">Show</label>
+																<select class="form-control form-control-sm rounded-0" name="entries">
+																		<option value="10">10</option>
+																		<option value="25">25</option>
+																		<option value="50">50</option>
+																		<option value="100">100</option>
+																		<option value="500">500</option>
+																		<option value="1000">1000</option>
+																</select>
+							</div>
 							<div class="form-group col-md-3">
+
 								<label for="from" class="control-label">Dari Tanggal</label>
                                 <input type="date" name="from" id="from" value="<?= $from ?>" class="form-control form-control-sm rounded-0">
 							</div>
-							<div class="form-group col-md-3">
+							<div class="form-group col-md-4">
 								<label for="to" class="control-label">Sampai Tanggal</label>
                                 <input type="date" name="to" id="to" value="<?= $to ?>" class="form-control form-control-sm rounded-0">
 							</div>
-							<div class="form-group col-md-4">
+							<div class="form-group col-md-3">
                                 <button class="btn btn-primary btn-flat btn-sm"><i class="fa fa-filter"></i> Filter</button>
 			                    <button class="btn btn-sm btn-flat btn-success" type="button" id="print"><i class="fa fa-print"></i> Print</button>
 							</div>
@@ -62,7 +79,7 @@ function duration($dur = 0){
 					</form>
 			</fieldset>
 		</div>
-		
+
 			<style>
 				#sys_logo{
 					object-fit:cover;
@@ -80,8 +97,10 @@ function duration($dur = 0){
 				<div class="col-8">
 					<h4 class="text-center"><b><?= $_settings->info('name') ?></b></h4>
 					<h3 class="text-center"><b>Laporan Keuangan Cek Laboraturium</b></h3>
-					<h5 class="text-center"><b>Rentang Waktu</b></h5>
+					<?php if($from!=null && $to!=null):?>
+						<h5 class="text-center"><b>Rentang Waktu</b></h5>
 					<h5 class="text-center"><b><?= date("F d, Y", strtotime($from)). " - ".date("F d, Y", strtotime($to)) ?></b></h5>
+				<?php endif;?>
 				</div>
 				<div class="col-2"></div>
 			</div>
@@ -116,10 +135,28 @@ function duration($dur = 0){
 					<?php
 						$i = 1;
 						$diskoun=0;
-						$qry = $conn->query("SELECT d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id  left join paket pk on pk.price_paket = ti.paket_price_id left join discount d on d.id = tl.discount_id where date(tl.date_created) between '{$from}' and '{$to}' order by unix_timestamp(tl.date_created) desc ");
+						$qry = "";
+						if($search !=null && $from !=null  && $to !=null )
+						{
+							// print_r("tes");
+							$qry = $conn->query("SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where concat(tl.sender,tl.sender_name,tl.client_name) like '%{$search}%' and date(tl.date_created) between '{$from}' and '{$to}' order by unix_timestamp(tl.date_created) desc LIMIT {$entries}");
+						}
+						else if($search!=null)
+						{
+								$qry = $conn->query("SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where concat(tl.sender,tl.sender_name,tl.client_name) like '%{$search}%' order by unix_timestamp(tl.date_created) desc LIMIT {$entries}");
+						}
+						else if($from!=null && $to!=null)
+						{
+							$qry = $conn->query("SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where date(tl.date_created) between '{$from}' and '{$to}' order by unix_timestamp(tl.date_created) desc LIMIT {$entries}");
+
+						}
+						else{
+
+							$qry = $conn->query("SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id order by unix_timestamp(tl.date_created) desc LIMIT {$entries}");
+						}
 						$total = 0;
 						while($row = $qry->fetch_assoc()):
-              if($row['paket_price_id']==null):
+
 				$hasil = $row['price'];
 					if($row['jenis_discount']=="persen"):
 						$diskoun = $row['price'] * $row['jumlah_discount']/100;
@@ -136,7 +173,7 @@ function duration($dur = 0){
 							<td class=""><p class="m-0"><?php echo $row['client_gender'] ?></p></td>
 							<td class=""><p class="m-0"><?php echo $row['sender'] ?></p></td>
 							<td class=""><p class="m-0"><?php echo $row['sender_name'] ?></p></td>
-							<td></td>
+							<td class=""><p class="m-0"><?php echo $row['category_name'] ?></p></td>
 							<td class=""><p class="m-0"><?php echo $row['size'] ?></p></td>
 							<td class=""><p class="m-0"><?php echo $row['hasil'] ?></p></td>
 							<td class=""><p class="m-0"><?php echo $row['client_gender'] == "Pria" ? $row['normalvalue'] : $row['normalvalue_wanita'] ?></p></td>
@@ -145,39 +182,12 @@ function duration($dur = 0){
 							<td class=""><p class="m-0"><?php echo $row['title'] ?></p></td>
 							<td class="text-right"><?= number_format($hasil,2) ?></td>
 						</tr>
-					<?php endif;endwhile; ?>
-          <?php 
-						$k = 1;
-						$qry = $conn->query("SELECT c.name,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount,ti.paket_price_id,(SELECT size from price_list where id = pk.price_id ) as detail,p.price as harga from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id  inner join paket pk on pk.price_paket = ti.paket_price_id left join discount d on d.id = tl.discount_id inner join category_list c on p.category_id = c.id where date(tl.date_created) between '{$from}' and '{$to}' group by ti.transaction_id,ti.paket_price_id order by unix_timestamp(tl.date_created) desc");
-						while($row = $qry->fetch_assoc()):
-              $qry2 = $conn->query("SELECT size as paket , price  from price_list where id = {$row['paket_price_id']}")->fetch_assoc();
-              
-			  $hasil = $qry2['price'];
-			  $diskoun = $qry2['price'] * $row['jumlah_discount']/100;
-			  $hasil = $hasil - $diskoun;
-			  $total += $hasil;
-					?>
-						<tr>
-							<td class="text-center"><?php echo $k = $i++; ?></td>
-							<td class=""><?php echo $row['code'] ?><br><?php echo date("d-m-Y",strtotime($row['date_created'])) ?></td>
-							<td class=""><p class="m-0"><?php echo $row['client_name'] ?></p></td>
-							<td class=""><p class="m-0"><?php echo $row['client_gender'] ?></p></td>
-							<td class=""><p class="m-0"><?php echo $row['sender'] ?></p></td>
-							<td class=""><p class="m-0"><?php echo $row['sender_name'] ?></p></td>
-							<td><p class="m-0"></p><?php echo $row['name'] ?></td>
-							<td class=""><p class="m-0"><?php echo $qry2['paket'] ?></p></td>
-							<td class=""><p class="m-0"></p></td>
-							<td class=""><p class="m-0"></p></td>
-							<td class=""><p class="m-0"></p></td>
-							<td class=""><p class="m-0"><?= number_format($qry2['price'],2) ?></p></td>
-							<td class=""><p class="m-0"><?php echo $row['title'] ?></p></td>
-							<td class="text-right"><?= number_format($hasil,2) ?></td>
-						</tr>
-					<?php  endwhile; ?>
+					<?php endwhile; ?>
+
 				</tbody>
 				<tfoot>
                     <tr class="bg-gradient-secondary">
-                        <th class="py-1 text-center" colspan='12'><b>Total<b></th>
+                        <th class="py-1 text-center" colspan='13'><b>Total<b></th>
                         <th class="px-2 py-1 text-right total_amount"><?php echo number_format($total) ?></th>
                     </tr>
 
@@ -188,18 +198,21 @@ function duration($dur = 0){
 	</div>
 </div>
 <script>
-	
+
 	$(document).ready(function(){
-		
+
 		$('.table td, .table th').addClass('py-1 px-2 align-middle')
 		$('.table').dataTable({
 		// 	dom: 'Bfrtip',
         //     buttons: [
         //     'print'
         // ],
+				searching : false,
+				lengthChange : false,
+				// searching : false,
             columnDefs: [
                 { orderable: false, targets: 4 },
-				
+
             ],
         });
         $('.select2').select2({
@@ -209,6 +222,10 @@ function duration($dur = 0){
             e.preventDefault();
             location.href= './?page=reports/date_wise_transaction&'+$(this).serialize();
         })
+				$('#query').submit(function(e){
+						e.preventDefault();
+						location.href= './?page=reports/date_wise_transaction&'+$(this).serialize();
+				})
        $('#print').click(function(){
 		   start_loader()
 		   var _p = $('#outprint').clone()
