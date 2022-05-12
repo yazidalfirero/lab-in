@@ -34,8 +34,31 @@ function duration($dur = 0){
     $dur = sprintf("%'.02d",$hours).":".sprintf("%'.02d",$min);
     return $dur;
 }
+
+$paket = "SELECT c.name as category, count(pk.price_id) as jumlah_data from price_list p inner join paket pk on p.id = pk.price_id inner join category_list c on p.category_id = c.id group by price_paket";
+$qry = $conn->query($paket);
+$paket_data = $qry->fetch_assoc();
+function paket($paket,$qry)
+{
+	// print_r($qry->fetch_assoc());
+	$data = 0;
+	while($qry)
+	{
+		if($qry['category'] == $paket)
+		{
+			$data = $qry['jumlah_data'];
+		}
+	}
+	echo $data > 0 ? $data : 0;
+}
+// paket("Darah Lengkap",$qry);
+// while ($row=$qry->fetch_assoc())
+// {
+// 	print("<pre>".print_r($row,true)."</pre>");
+// }
+// print_r($qry->fetch_array());
 ?>
-<div class="card card-outline card-purple rounded-0 shadow">
+<div class="card card-outline card-purple rounded-0 shadow overflow-auto">
 	<div class="card-header">
 		<h3 class="card-title">Laporan Keuangan Test Laboraturium</h3>
 		<div class="card-tools">
@@ -54,12 +77,13 @@ function duration($dur = 0){
 							<div class="form-group col-md-2">
 								<label for="from" class="control-label">Show</label>
 																<select class="form-control form-control-sm rounded-0" name="entries">
-																		<option value="10">10</option>
-																		<option value="25">25</option>
-																		<option value="50">50</option>
-																		<option value="100">100</option>
-																		<option value="500">500</option>
-																		<option value="1000">1000</option>
+																		<option value="10" <?php if($entries == 10): ?> selected <?php endif ?>>10</option>
+																		<option value="25" <?php if($entries == 25): ?>selected <?php endif ?>>25</option>
+																		<option value="50" <?php if($entries == 50): ?>selected <?php endif ?>>50</option>
+																		<option value="100" <?php if($entries == 100): ?>selected <?php endif ?>>100</option>
+																		<option value="500" <?php if($entries == 500): ?>selected <?php endif ?>>500</option>
+																		<option value="1000" <?php if($entries == 1000): ?>selected <?php endif ?>>1000</option>
+																		<option value="''" <?php if($entries == 18446744073709551615): ?>selected <?php endif ?>>all</option>
 																</select>
 							</div>
 							<div class="form-group col-md-3">
@@ -133,30 +157,42 @@ function duration($dur = 0){
 				<tbody>
 
 					<?php
-						$i = 1;
-						$diskoun=0;
-						$qry = "";
+								$i = 1;
+								$diskoun=0;
+								$qry = "";
 						if($search !=null && $from !=null  && $to !=null )
 						{
 							// print_r("tes");
-							$qry = $conn->query("SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where concat(tl.sender,tl.sender_name,tl.client_name,c.name,p.size) like '%{$search}%' and date(tl.date_created) between '{$from}' and '{$to}' order by unix_timestamp(tl.date_created) desc LIMIT {$entries}");
+								$query = "SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount as total_amount,(SELECT SUM(total_amount) from transaction_list where id in (tl.id) group by tl.id) as total_total ,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where concat(tl.sender,tl.sender_name,tl.client_name,c.name,p.size) like '%{$search}%' and date(tl.date_created) between '{$from}' and '{$to}' order by unix_timestamp(tl.date_created) desc LIMIT {$entries}";
+								$total = "SELECT tl.total_amount as total_total from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where concat(tl.sender,tl.sender_name,tl.client_name,c.name,p.size) like '%{$search}%' and date(tl.date_created) between '{$from}' and '{$to}' and ti.paket_price_id is not null group by tl.id 	order by unix_timestamp(tl.date_created) desc LIMIT {$entries}";
+								$qry = $conn->query($query);
+								// $qry_total = $conn->query($total);
 						}
 						else if($search!=null)
 						{
-								$qry = $conn->query("SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where concat(tl.sender,tl.sender_name,tl.client_name,c.name,c.name,p.size) like '%{$search}%' order by unix_timestamp(tl.date_created) desc LIMIT {$entries}");
+								$query = "SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount as total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where concat(tl.sender,tl.sender_name,tl.client_name,c.name,c.name,p.size) like '%{$search}%' order by unix_timestamp(tl.date_created) desc LIMIT {$entries}";
+								$total = "SELECT tl.total_amount as total_total from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where concat(tl.sender,tl.sender_name,tl.client_name,c.name,c.name,p.size) like '%{$search}%' and ti.paket_price_id is not null order by unix_timestamp(tl.date_created) desc LIMIT {$entries}";
+								$qry = $conn->query($query);
+								// $qry_total = $conn->query($total);
 						}
 						else if($from!=null && $to!=null)
 						{
-							$qry = $conn->query("SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where date(tl.date_created) between '{$from}' and '{$to}' order by unix_timestamp(tl.date_created) desc LIMIT {$entries}");
-
+								$query = "SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount as total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where date(tl.date_created) between '{$from}' and '{$to}' order by unix_timestamp(tl.date_created) desc LIMIT {$entries}";
+								$total = "SELECT tl.total_amount as total_total from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id where date(tl.date_created) between '{$from}' and '{$to}' group by ti.transaction_id order by unix_timestamp(tl.date_created) desc LIMIT {$entries}";
+								$qry = $conn->query($query);
+								// $qry_total = $conn->query($total);
 						}
 						else{
-
-							$qry = $conn->query("SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id order by unix_timestamp(tl.date_created) desc LIMIT {$entries}");
+								$query = "SELECT c.name as category_name, d.jenis_discount,d.jumlah_discount,p.price,d.title,tl.discount_id,tl.client_gender,p.normalvalue,p.normalvalue_wanita,p.satuan,tl.code,ti.hasil, tl.sender_name,tl.sender,tl.date_created, p.size, tl.client_name, tl.total_amount as total_amount,ti.paket_price_id,ti.price from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id order by unix_timestamp(tl.date_created) desc LIMIT {$entries}";
+								$total =  "SELECT tl.total_amount as total_total from `transaction_items` as ti inner join `transaction_list` as tl on ti.transaction_id = tl.id inner join `price_list` as p on ti.price_id = p.id inner join category_list c on p.category_id = c.id left join discount d on d.id = tl.discount_id and ti.paket_price_id is not null group by ti.transaction_id order by unix_timestamp(tl.date_created) desc LIMIT {$entries}";
+								$qry = $conn->query($query);
+								// $qry_total = $conn->query($total);
 						}
-						$total = 0;
-						while($row = $qry->fetch_assoc()):
+								$total = 0;
+						// print_r($qry_total->fetch_array());
 
+						while($row = $qry->fetch_assoc()):
+							// print_r($row);
 				$hasil = $row['price'];
 					if($row['jenis_discount']=="persen"):
 						$diskoun = $row['price'] * $row['jumlah_discount']/100;
@@ -164,7 +200,7 @@ function duration($dur = 0){
 						$diskoun = $row['jumlah_discount'];
 				endif;
 				$hasil = $hasil - $diskoun;
-				$total += $hasil;
+				// $total = $row['total_total'];
 					?>
 						<tr>
 							<td class="text-center"><?php echo $i++; ?></td>
@@ -173,7 +209,7 @@ function duration($dur = 0){
 							<td class=""><p class="m-0"><?php echo $row['client_gender'] ?></p></td>
 							<td class=""><p class="m-0"><?php echo $row['sender'] ?></p></td>
 							<td class=""><p class="m-0"><?php echo $row['sender_name'] ?></p></td>
-							<td class=""><p class="m-0"><?php echo $row['category_name'] ?></p></td>
+							<td class="" rowspan="<?php  ?>"><p class="m-0"><?php echo $row['category_name'] ?></p></td>
 							<td class=""><p class="m-0"><?php echo $row['size'] ?></p></td>
 							<td class=""><p class="m-0"><?php echo $row['hasil'] ?></p></td>
 							<td class=""><p class="m-0"><?php echo $row['client_gender'] == "Pria" ? $row['normalvalue'] : $row['normalvalue_wanita'] ?></p></td>
@@ -183,7 +219,14 @@ function duration($dur = 0){
 							<td class="text-right"><?= number_format($hasil,2) ?></td>
 						</tr>
 					<?php endwhile; ?>
-
+					<?php
+paket($row['category_name'],$paket,$paket_data)
+						// while($row = $qry_total->fetch_assoc())
+						// {
+						// 	// print_r($row);
+						// 	$total += $row['total_total'];
+						// }
+					 ?>
 				</tbody>
 				<tfoot>
                     <tr class="bg-gradient-secondary">
